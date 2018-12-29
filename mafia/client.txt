@@ -1,0 +1,215 @@
+package com.example.java;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.net.Socket;
+import java.util.List;
+import java.util.Optional;
+
+public class MainClass {
+
+	public static void main(String[] args) {
+
+		socket();
+
+	}
+
+	public static void socket() {
+		try {
+			/*
+			 * Socket sock = new Socket("127.0.0.1", 3302);
+			 * 
+			 * Message m = new Message(1, "1234567890", "abcdefghij");
+			 * 
+			 * // ByteArrayInputStream b = new ByteArrayInputStream(outData);
+			 * 
+			 * System.out.println("test");
+			 * 
+			 * OutputStream os = sock.getOutputStream(); ObjectOutputStream oos = new
+			 * ObjectOutputStream(os); oos.writeObject(m);
+			 * 
+			 * // InputStream is = sock.getInputStream(); ObjectInputStream ois = new
+			 * ObjectInputStream(is); // 전송된 byte[] 데이터를 수신합니다. Message data = (Message)
+			 * ois.readObject();
+			 * 
+			 * System.out.println("data size : " + data);
+			 * 
+			 */
+
+			Socket sock = new Socket("127.0.0.1", 3302);
+			BufferedReader keyBoard = new BufferedReader(new InputStreamReader(System.in));
+			OutputStream out = sock.getOutputStream();
+			InputStream in = sock.getInputStream();
+			PrintWriter pw = new PrintWriter(new OutputStreamWriter(out));
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			String line = null;
+
+			while ((line = keyBoard.readLine()) != null) {
+				if (line.equals("quit"))
+					break;
+
+				Message send = new Message((byte) 1, "testMessage", line);
+				// out.write(serialize(send));
+				out.write(send.toBytes());
+				out.flush();
+
+				byte[] data = new byte[148];
+
+				in.read(data);
+				Message m = new Message(data);
+				System.out.println("message : " + m);
+
+				// line += "\r\n";
+				// out.write(line.getBytes());
+				// out.flush();
+
+				// pw.println(line);
+				// pw.flush();
+
+				// String echo = br.readLine();
+
+				// System.out.println("서버로부터 전달받은 문자열 :" + echo);
+			}
+
+			pw.close();
+			br.close();
+			sock.close();
+
+			/*
+			 * Socket sock = new Socket("127.0.0.1", 3302); BufferedReader keyBoard = new
+			 * BufferedReader(new InputStreamReader(System.in)); OutputStream out =
+			 * sock.getOutputStream(); InputStream in = sock.getInputStream(); PrintWriter
+			 * pw = new PrintWriter(new OutputStreamWriter(out)); BufferedReader br = new
+			 * BufferedReader(new InputStreamReader(in)); String line = null; while ((line =
+			 * keyBoard.readLine()) != null) { if (line.equals("quit")) break;
+			 * 
+			 * pw.println(line); pw.flush(); String echo = br.readLine();
+			 * 
+			 * System.out.println("서버로부터 전달받은 문자열 :" + echo); }
+			 * 
+			 * pw.close(); br.close(); sock.close();
+			 */
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+
+		}
+	}
+
+	public static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
+		ByteArrayInputStream in = new ByteArrayInputStream(data);
+		ObjectInputStream is = new ObjectInputStream(in);
+		return is.readObject();
+	}
+
+	public static byte[] serialize(Object obj) throws IOException {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ObjectOutputStream os = new ObjectOutputStream(out);
+		os.writeObject(obj);
+		return out.toByteArray();
+	}
+
+	public static Optional<Player> foo(List<Player> players, int a) {
+		if (a == 1)
+			return null;
+		else
+			return players.stream().findFirst();
+
+	}
+
+}
+
+class Message implements Serializable {
+	byte type;
+	String writer;
+	String text;
+
+	public Message() {
+	}
+
+	public Message(byte[] data) {
+		this.getData(data);
+	}
+
+	public Message(byte type, String writer, String text) {
+		this.type = type;
+		this.writer = writer;
+		this.text = text;
+	}
+
+	@Override
+	public String toString() {
+		return "Message [type=" + type + ", writer=" + writer + ", text=" + text + "]";
+	}
+
+	public byte[] toBytes() {
+		byte[] bytes = new byte[145];
+
+		bytes[0] = 0x01;
+
+		byte[] temp = String.format("%-16s", writer).replace(" ", "\0").getBytes();
+
+		System.arraycopy(temp, 0, bytes, 1, temp.length);
+
+		temp = text.getBytes();
+
+		System.arraycopy(temp, 0, bytes, 17, temp.length);
+
+		return bytes;
+	}
+
+	public void getData(byte[] bytes) {
+		this.type = bytes[0];
+
+		byte[] temp = new byte[16];
+		System.arraycopy(bytes, 1, temp, 0, 16);
+		this.writer = new String(temp).trim();
+
+		byte[] temp2 = new byte[128];
+		System.arraycopy(bytes, 17, temp2, 0, 128);
+		this.text = new String(temp2).trim();
+
+	}
+}
+
+class Player {
+	private String userName;
+	private String word;
+
+	public Player(String name, String word) {
+		this.userName = name;
+		this.word = word;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getWord() {
+		return word;
+	}
+
+	public void setWord(String word) {
+		this.word = word;
+	}
+
+	@Override
+	public String toString() {
+		return "Player [userName=" + userName + ", word=" + word + "]";
+	}
+
+}
